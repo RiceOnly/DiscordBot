@@ -1,0 +1,12 @@
+{
+  "name": "greeter-bot",
+  "version": "1.0.0",
+  "description": "My own Sunday Showdown Discord Bot",
+  "main": "bot.js",
+  "author": "Aaron Liu",
+  "dependencies": {
+    "discord.io": "^2.5.3",
+    "discord.js": "^11.3.2",
+    "winston": "^3.0.0"
+  }
+}
