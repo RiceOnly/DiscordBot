@@ -137,7 +137,6 @@ function updateDate(channel, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} value 
  */
-
 function updateTime(channel, value) {
     time = `${value}`;
     channel.send(`Time was updated to: ${time}`);
@@ -148,6 +147,9 @@ function updateTime(channel, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
  * @param {string} value
+ * @param {string} displayDate
+ * @param {string} date
+ * @param {string} time
  */
 function provideDateAndTime(channel, option, value) {
     if(date && !time) {
@@ -164,8 +166,13 @@ function provideDateAndTime(channel, option, value) {
     }
 }
 
-//reset status and date & time
-
+/**
+ * Resest status, date and time of the tournament
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {string} time
+ * @param {string} date
+ * @param {string} status
+ */
 function resetStatus(channel) {
     time = undefined;
     date = undefined;
