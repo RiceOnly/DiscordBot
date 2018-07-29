@@ -167,19 +167,19 @@ function provideDateAndTime(channel, option, value) {
 }
 
 /**
- * Resest status, date and time of the tournament
+ * Reset status, date and time of the tournament
  * @param {TextChannel | DMChannel | GroupDMChannel} channel
- * @param {string} time
- * @param {string} date
  * @param {string} status
+ * @param {string} date
+ * @param {string} time
  */
 function resetStatus(channel) {
-    time = undefined;
-    date = undefined;
     status = undefined;
+    date = undefined;
+    time = undefined;
 
-    provideStatus(channel);
-    provideDateAndTime(channel);
+    provideStatus(channel, option);
+    provideDateAndTime(channel, option);
 }
 
 /**
@@ -281,8 +281,8 @@ function availableCommands(channel, option) {
  */
 function statusUtil(channel, option, value) {
     if (!option) {
-        provideStatus(channel, option);
-        provideDateAndTime(channel, option);
+        provideStatus(channel, option, value);
+        provideDateAndTime(channel, option, value);
     }
     else if (option === 'update') {
         updateStatus(channel, value);
