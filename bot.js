@@ -30,9 +30,9 @@ bot.on('message', async msg => {
     let author = msg.author;
     let username = author.username;
     let tag = author.tag.trim();
-
+    
     if (author.bot) return;       
-
+    
     switch (command) {
         case `${prefix}help`:            
             provideHelp(channel, option);
@@ -51,7 +51,7 @@ bot.on('message', async msg => {
             break;
 
         case `${prefix}leave`:
-            leaveShowdown(channel, option, tag, author);
+            leaveShowdown(guild, channel, option, tag, author);
             break;
 
         case `${prefix}commands`:
@@ -163,14 +163,18 @@ function joinShowdown(guild, channel, gamerTag, username, tag, author) {
 /**
  * Remove oneself from the participants list
  * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {Guild} guild
  * @param {string} option 
  * @param {string} tag 
  * @param {string} author
  */
-function leaveShowdown(channel, option, tag, author) {
+function leaveShowdown(guild, channel, option, tag, author) {
     if (!option) {
         if (participants.has(`${tag}`)) {
             participants.delete(`${tag}`);
+            guild.owner.send(`${author} has left the tournament.`)
+                .then(message => console.log(`Sent message: ${message.content}`))
+                .catch(console.error);
             channel.send(`We hate to see you go ${author}, but you have now been removed from the tournament.`);
         }
         else {
