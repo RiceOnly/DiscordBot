@@ -178,8 +178,8 @@ function resetStatus(channel) {
     date = undefined;
     time = undefined;
 
-    provideStatus(channel, option);
-    provideDateAndTime(channel, option);
+    provideStatus(channel, option, value);
+    provideDateAndTime(channel, option, value);
 }
 
 /**
