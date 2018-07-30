@@ -3,8 +3,11 @@ const auth = require('./auth.json');
 const prefix = auth.prefix;
 
 const bot = new Discord.Client({disableEveryone: true});
-let status = 'Status: ';
-let date = 'Tournament Date: ';
+let status;
+let displayStatus;
+let date;
+let time;
+let displayDate;
 let participants = new Map();
 
 bot.on('ready', async () => {
@@ -40,6 +43,10 @@ bot.on('message', async msg => {
 
         case `${prefix}status`:
             statusUtil(channel, option, value);
+            break;
+
+        case `${prefix}reset`:
+            resetStatus(channel);
             break;
         
         case `${prefix}show`:
@@ -90,15 +97,11 @@ function provideHelp(channel, option) {
  * @param {string} value 
  */
 function updateStatus(channel, value) {
-    if (value.toLowerCase().trim() === 'no') {
-        status = 'Status: No';
-        channel.send(`Status was updated to: ${value}`);
-    }
-    else if (value.toLowerCase().trim() === 'yes') {
-        status = 'Status: Yes';
-        channel.send(`Status was updated to: ${value}`);
-    }
-    else {
+    if (value.toLowerCase().trim() === 'no' || value.toLowerCase().trim() === 'yes') {
+        status = `${value}`;
+        displayStatus = `Status: ${status}`;
+        channel.send(`Status was updated to: ${status}`);
+    } else {
         channel.send('Those options are not available at the moment.');
     }
 }
@@ -110,7 +113,12 @@ function updateStatus(channel, value) {
  * @param {string} value
  */
 function provideStatus(channel, option, value) {
-    channel.send(status);
+    if(status) {
+    displayStatus = `Status: ${status}`;
+    channel.send(displayStatus);
+    } else {
+        channel.send(`__Status__: A **status** has not been set. Use *ss~status update* <**yes** or **no**> to update the tournament status.`)
+    }
     
 }
 
@@ -120,8 +128,18 @@ function provideStatus(channel, option, value) {
  * @param {string} value 
  */
 function updateDate(channel, value) {
-    date = `Tournament Date: ${value}`;
-    channel.send(`Date was updated to: ${value}`);
+    date = `${value}`;
+    channel.send(`Date was updated to: ${date}`);
+}
+
+/**
+ * Update the time of the tournament
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel 
+ * @param {string} value 
+ */
+function updateTime(channel, value) {
+    time = `${value}`;
+    channel.send(`Time was updated to: ${time}`);
 }
 
 /**
@@ -129,9 +147,39 @@ function updateDate(channel, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
  * @param {string} value
+ * @param {string} displayDate
+ * @param {string} date
+ * @param {string} time
  */
-function provideDate(channel, option, value) {
-    channel.send(date);
+function provideDateAndTime(channel, option, value) {
+    if(date && !time) {
+        displayDate = `__Tournament Date__: **${date}**. A **time** has not been set. Use *ss~status time* <**00:00**> to update the time.`
+        channel.send(displayDate);
+    } else if(time && !date) {
+        displayDate = `__Tournament Date__: **${time}**. A **date** has not been set. Let's be honest, it's probably on Sunday :/, but use *ss~status date* <**MM/YYYY**> to update the date anyway because <:FeelsDumbMan:471898989206306816>`
+        channel.send(displayDate);
+    } else if(!date && !time){
+        channel.send(`__Tournament Date__: A **date** and **time** have not been provided. Use *ss~status date* <**MM/YYYY**> to update the date, and *ss~status time* <**00:00**> to update the time.`)
+    } else {
+        displayDate = `__Tournament Date__: **${date}** at **${time}**`
+        channel.send(displayDate);
+    }
+}
+
+/**
+ * Reset status, date and time of the tournament
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {string} status
+ * @param {string} date
+ * @param {string} time
+ */
+function resetStatus(channel) {
+    status = undefined;
+    date = undefined;
+    time = undefined;
+
+    provideStatus(channel, option, value);
+    provideDateAndTime(channel, option, value);
 }
 
 /**
@@ -206,17 +254,19 @@ function showParticipants(channel, option) {
  */
 function availableCommands(channel, option) {
     if (!option) {
-        channel.send(`Available commands:
+        channel.send(`\`\`\`Available commands:
         ss~status  : Find out the status of the tournament
         ss~status update <Yes or No> : Update the status of the tournament
         ss~status date <MM/DD/YYYY> : Update the date of the tournment
+        ss~status time <00:00> : Update the time of the tournament
+        ss~reset : resets tournament status, date and time
         
         ss~show : List of Participants 
 
         ss~join <Gamer Tag> : Joining Tournament 
         ss~leave : Leave the tournment
 
-        ss~help : Provides information on how to join`);
+        ss~help : Provides information on how to join\`\`\``);
     }
     else {
         channel.send('Those options are not available at the moment.');
@@ -231,15 +281,18 @@ function availableCommands(channel, option) {
  */
 function statusUtil(channel, option, value) {
     if (!option) {
-        provideStatus(channel, option);
-        provideDate(channel, option);
+        provideStatus(channel, option, value);
+        provideDateAndTime(channel, option, value);
     }
     else if (option === 'update') {
         updateStatus(channel, value);
     }
     else if (option === 'date') {
         updateDate(channel, value);
-    }  
+    } 
+    else if (option === 'time') {
+        updateTime(channel, value);
+    } 
     else {
         channel.send('Those options are not available at the moment.');
     }  
