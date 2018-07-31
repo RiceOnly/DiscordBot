@@ -9,6 +9,7 @@ let date;
 let time;
 let displayDate;
 let participants = new Map();
+let assistMessage = 'Type *ss~commands* to view all available commands.';
 
 bot.on('ready', async () => {
     console.log(`Sunday Showdown Bot is ready! ${bot.user.username}`);
@@ -55,10 +56,12 @@ bot.on('message', async msg => {
         
         case `${prefix}join`:
             joinShowdown(guild, channel, option, username, tag, author);
+            msg.react('473326016782270474');
             break;
 
         case `${prefix}leave`:
-            leaveShowdown(channel, option, tag, author);
+            leaveShowdown(guild, channel, option, tag, author);
+            msg.react('471896637112057856');
             break;
 
         case `${prefix}commands`:
@@ -76,14 +79,19 @@ bot.login(auth.token);
  */
 function provideHelp(channel, option) {
     if (!option) {
-        channel.send(`To join SundayShowdown, please follow the below instructions:
+        channel.send({embed: {
+            title: 'Joining SundayShowdown',
+            color: 15105570,
+            description: `To join SundayShowdown, please follow the below instructions:
+
         1. Start the response with "ss~join" and then a space
         2. Put your Epic gamer tag after the space
-        3. Enter
-        
-        Ex.
-        ss~join myEpicGamerTag`
-        );
+        3. Press enter
+        4. <:AfroHype:473326016782270474>
+        Ex. ss~join MyEpicGamerTag
+
+        ${assistMessage}`
+        }});
     } 
     else {
         channel.send('Those options are not available at the moment.');
@@ -115,9 +123,8 @@ function updateStatus(channel, value) {
 function provideStatus(channel, option, value) {
     if(status) {
     displayStatus = `Status: ${status}`;
-    channel.send(displayStatus);
     } else {
-        channel.send(`__Status__: A **status** has not been set. Use *ss~status update* <**yes** or **no**> to update the tournament status.`)
+        displayStatus = `__Status__: A status has not been set.`
     }
     
 }
@@ -153,18 +160,32 @@ function updateTime(channel, value) {
  */
 function provideDateAndTime(channel, option, value) {
     if(date && !time) {
-        displayDate = `__Tournament Date__: **${date}**. A **time** has not been set. Use *ss~status time* <**00:00**> to update the time.`
-        channel.send(displayDate);
+        displayDate = `__Tournament Date__: ${date}. A time has not been set.`
     } else if(time && !date) {
-        displayDate = `__Tournament Date__: **${time}**. A **date** has not been set. Let's be honest, it's probably on Sunday :/, but use *ss~status date* <**MM/YYYY**> to update the date anyway because <:FeelsDumbMan:471898989206306816>`
-        channel.send(displayDate);
+        displayDate = `__Tournament Date__: ${time}. A date has not been set. Let's be honest, it's probably on Sunday <:FeelsDumbMan:471898989206306816>`
     } else if(!date && !time){
-        channel.send(`__Tournament Date__: A **date** and **time** have not been provided. Use *ss~status date* <**MM/YYYY**> to update the date, and *ss~status time* <**00:00**> to update the time.`)
+        displayDate = `__Tournament Date__: A date and time have not been provided.`
     } else {
-        displayDate = `__Tournament Date__: **${date}** at **${time}**`
-        channel.send(displayDate);
+        displayDate = `__Tournament Date__: ${date} at ${time} <:AfroHype:473326016782270474>`
     }
 }
+
+/**
+ * Call both provideStatus and provideDateAndTime functions
+ */
+function provideInfo(channel, option, value) {
+    provideStatus(channel, option, value);
+    provideDateAndTime(channel, option, value);
+    channel.send({embed: {
+            title: 'SundayShowdown Information',
+            color: 15105570,
+            description: `${displayStatus}
+
+            ${displayDate}
+
+            ${assistMessage}`
+        }});
+}        
 
 /**
  * Reset status, date and time of the tournament
@@ -178,8 +199,7 @@ function resetStatus(channel) {
     date = undefined;
     time = undefined;
 
-    provideStatus(channel, option, value);
-    provideDateAndTime(channel, option, value);
+    provideInfo(channel, option);
 }
 
 /**
@@ -200,7 +220,7 @@ function joinShowdown(guild, channel, gamerTag, username, tag, author) {
             guild.owner.send(`${author} has joined.`)
                 .then(message => console.log(`Sent message: ${message.content}`))
                 .catch(console.error);
-            channel.send(`Congratulations ${author}! You have been added to the list`);
+            channel.send(`<:AfroHype:473326016782270474> Congratulations ${author}! You have been added to the list! <:AfroHype:473326016782270474>`);
         }
         else {
             channel.send('You have already joined the list.');
@@ -211,14 +231,18 @@ function joinShowdown(guild, channel, gamerTag, username, tag, author) {
 /**
  * Remove oneself from the participants list
  * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {Guild} guild
  * @param {string} option 
  * @param {string} tag 
  * @param {string} author
  */
-function leaveShowdown(channel, option, tag, author) {
+function leaveShowdown(guild, channel, option, tag, author) {
     if (!option) {
         if (participants.has(`${tag}`)) {
             participants.delete(`${tag}`);
+             guild.owner.send(`${author} has left the tournament.`)
+                 .then(message => console.log(`Sent message: ${message.content}`))
+                 .catch(console.error);
             channel.send(`We hate to see you go ${author}, but you have now been removed from the tournament.`);
         }
         else {
@@ -238,6 +262,7 @@ function leaveShowdown(channel, option, tag, author) {
 function showParticipants(channel, option) {
     if (!option) {
         channel.send('List of Participants:');
+        //PROBLEM - not sure how to print participants into embed
         participants.forEach( (value,key) => {
             channel.send(key + ':' + value + '\n');
         });
@@ -254,19 +279,28 @@ function showParticipants(channel, option) {
  */
 function availableCommands(channel, option) {
     if (!option) {
-        channel.send(`\`\`\`Available commands:
-        ss~status  : Find out the status of the tournament
-        ss~status update <Yes or No> : Update the status of the tournament
-        ss~status date <MM/DD/YYYY> : Update the date of the tournment
-        ss~status time <00:00> : Update the time of the tournament
-        ss~reset : resets tournament status, date and time
+        channel.send({embed: {
+            color: 15105570,
+                title: 'Available Commands',
+                description: `
+        __ss~status__  | Find out the status of the tournament
+
+        __ss~status update__ <*Yes* or *No*> | Update the status of the tournament
+
+        __ss~status date__ <*MM/DD/YYYY*> | Update the date of the tournment
+
+        __ss~status time__ <*00:00*> | Update the time of the tournament
+
+        __ss~reset__ | Reset tournament status, date and time
         
-        ss~show : List of Participants 
+        __ss~show__ | List of Participants 
 
-        ss~join <Gamer Tag> : Joining Tournament 
-        ss~leave : Leave the tournment
+        __ss~join__ <*Gamer Tag*> | Joining Tournament 
 
-        ss~help : Provides information on how to join\`\`\``);
+        __ss~leave__ | Leave the tournment
+
+        __ss~help__ | Provides information on how to join`
+    }});
     }
     else {
         channel.send('Those options are not available at the moment.');
@@ -281,8 +315,7 @@ function availableCommands(channel, option) {
  */
 function statusUtil(channel, option, value) {
     if (!option) {
-        provideStatus(channel, option, value);
-        provideDateAndTime(channel, option, value);
+        provideInfo(channel, option);
     }
     else if (option === 'update') {
         updateStatus(channel, value);
