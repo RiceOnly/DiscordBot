@@ -172,6 +172,9 @@ function provideDateAndTime(channel, option, value) {
 
 /**
  * Call both provideStatus and provideDateAndTime functions
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {string} option
+ * @param {string} value
  */
 function provideInfo(channel, option, value) {
     provideStatus(channel, option, value);
