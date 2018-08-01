@@ -46,7 +46,7 @@ bot.on('message', async msg => {
             break;
 
         case `${prefix}reset`:
-            resetStatus(channel);
+            resetStatus(channel, option, value);
             break;
         
         case `${prefix}show`:
@@ -63,6 +63,10 @@ bot.on('message', async msg => {
 
         case `${prefix}commands`:
             availableCommands(channel, option);
+            break;
+        
+        case `${prefix}kick`:
+            kickUser(guild, channel, option, author, msg);
     }
 });
 
@@ -88,7 +92,6 @@ function provideHelp(channel, option) {
     else {
         channel.send('Those options are not available at the moment.');
     }
-    
 }
 
 /**
@@ -118,8 +121,7 @@ function provideStatus(channel, option, value) {
     channel.send(displayStatus);
     } else {
         channel.send(`__Status__: A **status** has not been set. Use *ss~status update* <**yes** or **no**> to update the tournament status.`)
-    }
-    
+    }   
 }
 
 /**
@@ -147,9 +149,6 @@ function updateTime(channel, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
  * @param {string} value
- * @param {string} displayDate
- * @param {string} date
- * @param {string} time
  */
 function provideDateAndTime(channel, option, value) {
     if(date && !time) {
@@ -169,11 +168,10 @@ function provideDateAndTime(channel, option, value) {
 /**
  * Reset status, date and time of the tournament
  * @param {TextChannel | DMChannel | GroupDMChannel} channel
- * @param {string} status
- * @param {string} date
- * @param {string} time
+ * @param {string} option
+ * @param {string} value
  */
-function resetStatus(channel) {
+function resetStatus(channel, option, value) {
     status = undefined;
     date = undefined;
     time = undefined;
@@ -300,4 +298,32 @@ function statusUtil(channel, option, value) {
     else {
         channel.send('Those options are not available at the moment.');
     }  
+}
+
+/**
+ * Owner can remove users from the tournament.
+ * @param {Guild} guild 
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel 
+ * @param {string} tag 
+ * @param {string} author 
+ * @param {string} msg 
+ */
+function kickUser(guild, channel, tag, author, msg) {
+    let guildOwner = guild.owner.id;
+    let msgOwner = author.id;
+
+    if (msgOwner == guildOwner) {
+        if (participants.has(tag)) {
+        participants.delete(tag);
+        guild.owner.send(`${tag} has been removed from the tournament.`)
+            .then(message => console.log(`Sent message: ${message.content}`))
+            .catch(console.error);
+        }
+        else { 
+            channel.send('User does not exist in the tournament.');
+        }
+    }
+    else {
+        channel.send('You are not the owner of this server.')
+    }
 }
