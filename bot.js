@@ -54,13 +54,11 @@ bot.on('message', async msg => {
             break;
         
         case `${prefix}join`:
-            joinShowdown(guild, channel, option, username, tag, author);
-            msg.react('473326016782270474');
+            joinShowdown(guild, channel, option, username, tag, author, msg);
             break;
 
         case `${prefix}leave`:
-            leaveShowdown(guild, channel, option, tag, author);
-            msg.react('471896637112057856');
+            leaveShowdown(guild, channel, option, tag, author, msg);
             break;
 
         case `${prefix}clip`:
@@ -128,7 +126,7 @@ function updateStatus(channel, value) {
  */
 function provideStatus(channel, option, value) {
     if(status) {
-    displayStatus = `**Status**: ${status.charAt(0).toUpperCase()}${status.substr(1)}`;
+        displayStatus = `**Status**: ${status.charAt(0).toUpperCase()}${status.substr(1)}`;
     } else {
         displayStatus = `**Status**: A status has not been set.`
     }
@@ -226,8 +224,9 @@ function resetStatus(channel, option, value, otherValue) {
  * @param {string} username 
  * @param {string} tag
  * @param {string} author
+ * @param {Message} msg
  */
-function joinShowdown(guild, channel, gamerTag, username, tag, author) {
+function joinShowdown(guild, channel, gamerTag, username, tag, author, msg) {
     // channel.send(`The username is: ${username} and the tag is: ${tag}.`);
     // channel.send(`The gamer tag you entered: ${gamerTag}.`); 
     if (gamerTag) {       
@@ -237,6 +236,7 @@ function joinShowdown(guild, channel, gamerTag, username, tag, author) {
                 .then(message => console.log(`Sent message: ${message.content}`))
                 .catch(console.error);
             channel.send(`<:AfroHype:473326016782270474> Congratulations ${author}! You have been added to the list! <:AfroHype:473326016782270474>`);
+            msg.react('473326016782270474');
         }
         else {
             channel.send('You have already joined the list.');
@@ -251,8 +251,9 @@ function joinShowdown(guild, channel, gamerTag, username, tag, author) {
  * @param {string} option 
  * @param {string} tag 
  * @param {string} author
+ * @param {Message} msg
  */
-function leaveShowdown(guild, channel, option, tag, author) {
+function leaveShowdown(guild, channel, option, tag, author, msg) {
     if (!option) {
         if (participants.has(`${tag}`)) {
             participants.delete(`${tag}`);
@@ -263,6 +264,7 @@ function leaveShowdown(guild, channel, option, tag, author) {
                 .then(message => console.log(`Sent message: ${message.content}`))
                 .catch(console.error);
             channel.send(`We hate to see you go ${author}, but you have now been removed from the tournament.`);
+            msg.react('471896637112057856');
         }
         else {
             channel.send('You have not joined the tournment.');
@@ -292,7 +294,7 @@ function showParticipants(channel, option) {
 }
 
 /**
- * 
+ * Select a random clip from an array
  * @param {array} array
  */
 function pickRandom(array) {
@@ -333,6 +335,12 @@ function addClip(channel, clips, option, value) {
     channel.send('Your clip has been added.');
 }
 
+/**
+ * List available clips
+ * @param {string} channel 
+ * @param {[string]} clips 
+ * @param {string} option 
+ */
 function listClips(channel, clips, option) {
     channel.send({embed: {
         title: 'List of Twitch Clips',
@@ -452,6 +460,13 @@ function kickUser(guild, channel, tag, author, msg) {
     }
 }
 
+/**
+ * Add twitch clips found in the list of clips
+ * @param {string} channel 
+ * @param {[string]} clips 
+ * @param {string} option 
+ * @param {string} value 
+ */
 function clipsUtil(channel, clips, option, value) {
     if(!option) {
         sendClip(channel, clips);
