@@ -37,9 +37,9 @@ bot.on('message', async msg => {
     let author = msg.author;
     let username = author.username;
     let tag = author.tag.trim();
-
+    
     if (author.bot) return;       
-
+    
     switch (command) {
         case `${prefix}help`:            
             provideHelp(channel, option);
@@ -60,11 +60,14 @@ bot.on('message', async msg => {
 
         case `${prefix}leave`:
             leaveShowdown(guild, channel, option, tag, author);
+<<<<<<< HEAD
             msg.react('471896637112057856');
             break;
 
         case `${prefix}clip`:
             clipsUtil(channel, clips, option, value);
+=======
+>>>>>>> c7a851aa3fd3d3437b78dc94a4b630cd37deb48a
             break;
 
         case `${prefix}commands`:
@@ -257,9 +260,15 @@ function leaveShowdown(guild, channel, option, tag, author) {
     if (!option) {
         if (participants.has(`${tag}`)) {
             participants.delete(`${tag}`);
+<<<<<<< HEAD
              guild.owner.send(`${author} has left the tournament.`)
                  .then(message => console.log(`Sent message: ${message.content}`))
                  .catch(console.error);
+=======
+            guild.owner.send(`${author} has left the tournament.`)
+                .then(message => console.log(`Sent message: ${message.content}`))
+                .catch(console.error);
+>>>>>>> c7a851aa3fd3d3437b78dc94a4b630cd37deb48a
             channel.send(`We hate to see you go ${author}, but you have now been removed from the tournament.`);
         }
         else {
