@@ -3,6 +3,8 @@ const auth = require('./auth.json');
 const prefix = auth.prefix;
 
 const bot = new Discord.Client({disableEveryone: true});
+
+const clips = require('./twitchclips');
 let status;
 let displayStatus;
 let date;
@@ -31,6 +33,7 @@ bot.on('message', async msg => {
     let command = msgArgs[0];
     let option = msgArgs[1];
     let value = msgArgs[2];
+    let otherValue = msgArgs[3];
     let author = msg.author;
     let username = author.username;
     let tag = author.tag.trim();
@@ -43,11 +46,7 @@ bot.on('message', async msg => {
             break;
 
         case `${prefix}status`:
-            statusUtil(channel, option, value);
-            break;
-
-        case `${prefix}reset`:
-            resetStatus(channel);
+            statusUtil(channel, option, value, otherValue);
             break;
         
         case `${prefix}show`:
@@ -62,6 +61,10 @@ bot.on('message', async msg => {
         case `${prefix}leave`:
             leaveShowdown(guild, channel, option, tag, author);
             msg.react('471896637112057856');
+            break;
+
+        case `${prefix}clip`:
+            clipsUtil(channel, clips, option, value);
             break;
 
         case `${prefix}commands`:
@@ -107,8 +110,8 @@ function provideHelp(channel, option) {
 function updateStatus(channel, value) {
     if (value.toLowerCase().trim() === 'no' || value.toLowerCase().trim() === 'yes') {
         status = `${value}`;
-        displayStatus = `Status: ${status}`;
-        channel.send(`Status was updated to: ${status}`);
+        displayStatus = `**Status**: ${status}`;
+        channel.send(`Status was updated to: ${status.charAt(0).toUpperCase()}${status.substr(1)}`);
     } else {
         channel.send('Those options are not available at the moment.');
     }
@@ -122,9 +125,9 @@ function updateStatus(channel, value) {
  */
 function provideStatus(channel, option, value) {
     if(status) {
-    displayStatus = `Status: ${status}`;
+    displayStatus = `**Status**: ${status.charAt(0).toUpperCase()}${status.substr(1)}`;
     } else {
-        displayStatus = `__Status__: A status has not been set.`
+        displayStatus = `**Status**: A status has not been set.`
     }
     
 }
@@ -141,12 +144,21 @@ function updateDate(channel, value) {
 
 /**
  * Update the time of the tournament
- * @param {TextChannel | DMChannel | GroupDMChannel} channel 
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {string} option 
  * @param {string} value 
+ * @param {string} otherValue
  */
-function updateTime(channel, value) {
-    time = `${value}`;
-    channel.send(`Time was updated to: ${time}`);
+function updateTime(channel, value, otherValue) {
+    if(otherValue) {
+        if(otherValue.toLowerCase() === 'am' || otherValue.toLowerCase() === 'pm') {
+            time = `${value} ${otherValue.toUpperCase()}`;
+            channel.send(`Time was updated to: ${time}`);
+        }
+    } else {
+        channel.send(`Please make sure to specify *AM* or *PM* after the time. 
+        Ex. 03:30 *PM*`);
+    }
 }
 
 /**
@@ -154,19 +166,20 @@ function updateTime(channel, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
  * @param {string} value
+ * @param {string} otherValue
  * @param {string} displayDate
  * @param {string} date
  * @param {string} time
  */
-function provideDateAndTime(channel, option, value) {
+function provideDateAndTime(channel, option, value, otherValue) {
     if(date && !time) {
-        displayDate = `__Tournament Date__: ${date}. A time has not been set.`
+        displayDate = `**Tournament Date**: ${date}. A time has not been set.`;
     } else if(time && !date) {
-        displayDate = `__Tournament Date__: ${time}. A date has not been set. Let's be honest, it's probably on Sunday <:FeelsDumbMan:471898989206306816>`
-    } else if(!date && !time){
-        displayDate = `__Tournament Date__: A date and time have not been provided.`
+        displayDate = `**Tournament Date**: ${time}. A date has not been set. Let's be honest, it's probably on Sunday <:FeelsDumbMan:471898989206306816>`;
+    } else if(!date && !time) {
+        displayDate = `**Tournament Date**: A date and time have not been provided.`;
     } else {
-        displayDate = `__Tournament Date__: ${date} at ${time} <:AfroHype:473326016782270474>`
+        displayDate = `**Tournament Date**: ${date} at ${time} <:AfroHype:473326016782270474>`;
     }
 }
 
@@ -175,10 +188,11 @@ function provideDateAndTime(channel, option, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel
  * @param {string} option
  * @param {string} value
+ * @param {string} otherValue
  */
-function provideInfo(channel, option, value) {
+function provideInfo(channel, option, value, otherValue) {
     provideStatus(channel, option, value);
-    provideDateAndTime(channel, option, value);
+    provideDateAndTime(channel, option, value, otherValue);
     channel.send({embed: {
             title: 'SundayShowdown Information',
             color: 15105570,
@@ -197,12 +211,12 @@ function provideInfo(channel, option, value) {
  * @param {string} date
  * @param {string} time
  */
-function resetStatus(channel) {
+function resetStatus(channel, option, value, otherValue) {
     status = undefined;
     date = undefined;
     time = undefined;
 
-    provideInfo(channel, option);
+    provideInfo(channel, option, value, otherValue);
 }
 
 /**
@@ -276,6 +290,48 @@ function showParticipants(channel, option) {
 }
 
 /**
+ * 
+ * @param {array} array
+ */
+function pickRandom(array) {
+    //shuffle array
+    // http://stackoverflow.com/questions/962802#962890
+    function shuffle(array) {
+        var tmp, current, top = array.length;
+        if(top) while(--top) {
+            current = Math.floor(Math.random() * (top + 1));
+            tmp = array[current];
+            array[current] = array[top];
+            array[top] = tmp;
+        }
+        return array;
+    }
+    a = shuffle(array);
+    return a[0];
+}
+
+/**
+ * Send clip from clips array
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {array} clips
+ */
+function sendClip(channel, clips) {
+    channel.send(pickRandom(clips))
+}
+
+/**
+ * Add twitch clip to clips array
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {array} clips
+ * @param {string} option
+ * @param {string} value
+ */
+function addClip(channel, clips, option, value) {
+    clips.push(value);
+    channel.send('Your clip has been added.');
+}
+
+/**
  * Show the available commands
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
@@ -285,24 +341,43 @@ function availableCommands(channel, option) {
         channel.send({embed: {
             color: 15105570,
                 title: 'Available Commands',
-                description: `
-        __ss~status__  | Find out the status of the tournament
+                fields: [{
+                    name: 'Status',
+                    value: `
 
-        __ss~status update__ <*Yes* or *No*> | Update the status of the tournament
+                    **ss~status**  | Find out the status of the tournament
 
-        __ss~status date__ <*MM/DD/YYYY*> | Update the date of the tournment
+                    **ss~status update** <*Yes* or *No*> | Update the status of the tournament
 
-        __ss~status time__ <*00:00*> | Update the time of the tournament
+                    **ss~status date** <*MM/DD/YYYY*> | Update the date of the tournament
 
-        __ss~reset__ | Reset tournament status, date and time
+                    **ss~status time** <*00:00*> <*AM*/*PM*> | Update the time of the tournament
+
+                    **ss~status reset** | Reset tournament status, date and time
+
+                    `
+                },
+                {
+                    name: 'Participation',
+                    value: `
         
-        __ss~show__ | List of Participants 
+                    **ss~show** | List of Participants 
 
-        __ss~join__ <*Gamer Tag*> | Joining Tournament 
+                    **ss~join** <*Gamer Tag*> | Joining Tournament 
 
-        __ss~leave__ | Leave the tournment
+                    **ss~leave** | Leave the tournament
 
-        __ss~help__ | Provides information on how to join`
+                     **ss~help** | Provides information on how to join`
+                },
+                {
+                    name: 'Clips',
+                    value: `
+
+                    **ss~clip** | Show random Twitch clip
+
+                    **ss~clip add** | Add a Twitch clip`
+                }]
+
     }});
     }
     else {
@@ -316,9 +391,9 @@ function availableCommands(channel, option) {
  * @param {string} option 
  * @param {string} value 
  */
-function statusUtil(channel, option, value) {
+function statusUtil(channel, option, value, otherValue) {
     if (!option) {
-        provideInfo(channel, option);
+        provideInfo(channel, option, value, otherValue);
     }
     else if (option === 'update') {
         updateStatus(channel, value);
@@ -327,9 +402,24 @@ function statusUtil(channel, option, value) {
         updateDate(channel, value);
     } 
     else if (option === 'time') {
-        updateTime(channel, value);
+        updateTime(channel, value, otherValue);
     } 
+    else if (option === 'reset') {
+        resetStatus(channel, option, value, otherValue);
+    }
     else {
         channel.send('Those options are not available at the moment.');
     }  
+}
+
+function clipsUtil(channel, clips, option, value) {
+    if(!option) {
+        sendClip(channel, clips);
+    }
+    else if(option === 'add') {
+        addClip(channel, clips, option, value);
+    }
+     else {
+        channel.send('Those options are not available at the moment.');
+    }
 }
