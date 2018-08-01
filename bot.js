@@ -331,6 +331,14 @@ function addClip(channel, clips, option, value) {
     channel.send('Your clip has been added.');
 }
 
+function listClips(channel, clips, option) {
+    channel.send({embed: {
+        title: 'List of Twitch Clips',
+        color: 15105570,
+        description: clips.join(' ')
+        }});
+}
+
 /**
  * Show the available commands
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
@@ -375,7 +383,9 @@ function availableCommands(channel, option) {
 
                     **ss~clip** | Show random Twitch clip
 
-                    **ss~clip add** | Add a Twitch clip`
+                    **ss~clip add** | Add a Twitch clip
+
+                    **ss~clip list** | Lists all Twitch clips`
                 }]
 
     }});
@@ -418,6 +428,9 @@ function clipsUtil(channel, clips, option, value) {
     }
     else if(option === 'add') {
         addClip(channel, clips, option, value);
+    }
+    else if(option === 'list') {
+        listClips(channel, clips, option);
     }
      else {
         channel.send('Those options are not available at the moment.');
