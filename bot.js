@@ -3,12 +3,15 @@ const auth = require('./auth.json');
 const prefix = auth.prefix;
 
 const bot = new Discord.Client({disableEveryone: true});
+
+const clips = require('./twitchclips');
 let status;
 let displayStatus;
 let date;
 let time;
 let displayDate;
 let participants = new Map();
+let assistMessage = 'Type *ss~commands* to view all available commands.';
 
 bot.on('ready', async () => {
     console.log(`Sunday Showdown Bot is ready! ${bot.user.username}`);
@@ -30,6 +33,7 @@ bot.on('message', async msg => {
     let command = msgArgs[0];
     let option = msgArgs[1];
     let value = msgArgs[2];
+    let otherValue = msgArgs[3];
     let author = msg.author;
     let username = author.username;
     let tag = author.tag.trim();
@@ -42,11 +46,7 @@ bot.on('message', async msg => {
             break;
 
         case `${prefix}status`:
-            statusUtil(channel, option, value);
-            break;
-
-        case `${prefix}reset`:
-            resetStatus(channel, option, value);
+            statusUtil(channel, option, value, otherValue);
             break;
         
         case `${prefix}show`:
@@ -55,10 +55,16 @@ bot.on('message', async msg => {
         
         case `${prefix}join`:
             joinShowdown(guild, channel, option, username, tag, author);
+            msg.react('473326016782270474');
             break;
 
         case `${prefix}leave`:
             leaveShowdown(guild, channel, option, tag, author);
+            msg.react('471896637112057856');
+            break;
+
+        case `${prefix}clip`:
+            clipsUtil(channel, clips, option, value);
             break;
 
         case `${prefix}commands`:
@@ -80,14 +86,19 @@ bot.login(auth.token);
  */
 function provideHelp(channel, option) {
     if (!option) {
-        channel.send(`To join SundayShowdown, please follow the below instructions:
+        channel.send({embed: {
+            title: 'Joining SundayShowdown',
+            color: 15105570,
+            description: `To join SundayShowdown, please follow the below instructions:
+
         1. Start the response with "ss~join" and then a space
         2. Put your Epic gamer tag after the space
-        3. Enter
-        
-        Ex.
-        ss~join myEpicGamerTag`
-        );
+        3. Press enter
+        4. <:AfroHype:473326016782270474>
+        Ex. ss~join MyEpicGamerTag
+
+        ${assistMessage}`
+        }});
     } 
     else {
         channel.send('Those options are not available at the moment.');
@@ -102,8 +113,8 @@ function provideHelp(channel, option) {
 function updateStatus(channel, value) {
     if (value.toLowerCase().trim() === 'no' || value.toLowerCase().trim() === 'yes') {
         status = `${value}`;
-        displayStatus = `Status: ${status}`;
-        channel.send(`Status was updated to: ${status}`);
+        displayStatus = `**Status**: ${status}`;
+        channel.send(`Status was updated to: ${status.charAt(0).toUpperCase()}${status.substr(1)}`);
     } else {
         channel.send('Those options are not available at the moment.');
     }
@@ -117,11 +128,11 @@ function updateStatus(channel, value) {
  */
 function provideStatus(channel, option, value) {
     if(status) {
-    displayStatus = `Status: ${status}`;
-    channel.send(displayStatus);
+    displayStatus = `**Status**: ${status.charAt(0).toUpperCase()}${status.substr(1)}`;
     } else {
-        channel.send(`__Status__: A **status** has not been set. Use *ss~status update* <**yes** or **no**> to update the tournament status.`)
-    }   
+        displayStatus = `**Status**: A status has not been set.`
+    }
+    
 }
 
 /**
@@ -136,12 +147,21 @@ function updateDate(channel, value) {
 
 /**
  * Update the time of the tournament
- * @param {TextChannel | DMChannel | GroupDMChannel} channel 
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {string} option 
  * @param {string} value 
+ * @param {string} otherValue
  */
-function updateTime(channel, value) {
-    time = `${value}`;
-    channel.send(`Time was updated to: ${time}`);
+function updateTime(channel, value, otherValue) {
+    if(otherValue) {
+        if(otherValue.toLowerCase() === 'am' || otherValue.toLowerCase() === 'pm') {
+            time = `${value} ${otherValue.toUpperCase()}`;
+            channel.send(`Time was updated to: ${time}`);
+        }
+    } else {
+        channel.send(`Please make sure to specify *AM* or *PM* after the time. 
+        Ex. 03:30 *PM*`);
+    }
 }
 
 /**
@@ -149,21 +169,40 @@ function updateTime(channel, value) {
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
  * @param {string} value
+ * @param {string} otherValue
  */
-function provideDateAndTime(channel, option, value) {
+function provideDateAndTime(channel, option, value, otherValue) {
     if(date && !time) {
-        displayDate = `__Tournament Date__: **${date}**. A **time** has not been set. Use *ss~status time* <**00:00**> to update the time.`
-        channel.send(displayDate);
+        displayDate = `**Tournament Date**: ${date}. A time has not been set.`;
     } else if(time && !date) {
-        displayDate = `__Tournament Date__: **${time}**. A **date** has not been set. Let's be honest, it's probably on Sunday :/, but use *ss~status date* <**MM/YYYY**> to update the date anyway because <:FeelsDumbMan:471898989206306816>`
-        channel.send(displayDate);
-    } else if(!date && !time){
-        channel.send(`__Tournament Date__: A **date** and **time** have not been provided. Use *ss~status date* <**MM/YYYY**> to update the date, and *ss~status time* <**00:00**> to update the time.`)
+        displayDate = `**Tournament Date**: ${time}. A date has not been set. Let's be honest, it's probably on Sunday <:FeelsDumbMan:471898989206306816>`;
+    } else if(!date && !time) {
+        displayDate = `**Tournament Date**: A date and time have not been provided.`;
     } else {
-        displayDate = `__Tournament Date__: **${date}** at **${time}**`
-        channel.send(displayDate);
+        displayDate = `**Tournament Date**: ${date} at ${time} <:AfroHype:473326016782270474>`;
     }
 }
+
+/**
+ * Call both provideStatus and provideDateAndTime functions
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {string} option
+ * @param {string} value
+ * @param {string} otherValue
+ */
+function provideInfo(channel, option, value, otherValue) {
+    provideStatus(channel, option, value);
+    provideDateAndTime(channel, option, value, otherValue);
+    channel.send({embed: {
+            title: 'SundayShowdown Information',
+            color: 15105570,
+            description: `${displayStatus}
+
+            ${displayDate}
+
+            ${assistMessage}`
+        }});
+}        
 
 /**
  * Reset status, date and time of the tournament
@@ -171,13 +210,12 @@ function provideDateAndTime(channel, option, value) {
  * @param {string} option
  * @param {string} value
  */
-function resetStatus(channel, option, value) {
+function resetStatus(channel, option, value, otherValue) {
     status = undefined;
     date = undefined;
     time = undefined;
 
-    provideStatus(channel, option, value);
-    provideDateAndTime(channel, option, value);
+    provideInfo(channel, option, value, otherValue);
 }
 
 /**
@@ -198,7 +236,7 @@ function joinShowdown(guild, channel, gamerTag, username, tag, author) {
             guild.owner.send(`${author} has joined.`)
                 .then(message => console.log(`Sent message: ${message.content}`))
                 .catch(console.error);
-            channel.send(`Congratulations ${author}! You have been added to the list`);
+            channel.send(`<:AfroHype:473326016782270474> Congratulations ${author}! You have been added to the list! <:AfroHype:473326016782270474>`);
         }
         else {
             channel.send('You have already joined the list.');
@@ -218,6 +256,9 @@ function leaveShowdown(guild, channel, option, tag, author) {
     if (!option) {
         if (participants.has(`${tag}`)) {
             participants.delete(`${tag}`);
+             guild.owner.send(`${author} has left the tournament.`)
+                 .then(message => console.log(`Sent message: ${message.content}`))
+                 .catch(console.error);
             guild.owner.send(`${author} has left the tournament.`)
                 .then(message => console.log(`Sent message: ${message.content}`))
                 .catch(console.error);
@@ -240,6 +281,7 @@ function leaveShowdown(guild, channel, option, tag, author) {
 function showParticipants(channel, option) {
     if (!option) {
         channel.send('List of Participants:');
+        //PROBLEM - not sure how to print participants into embed
         participants.forEach( (value,key) => {
             channel.send(key + ':' + value + '\n');
         });
@@ -250,25 +292,105 @@ function showParticipants(channel, option) {
 }
 
 /**
+ * 
+ * @param {array} array
+ */
+function pickRandom(array) {
+    //shuffle array
+    // http://stackoverflow.com/questions/962802#962890
+    function shuffle(array) {
+        var tmp, current, top = array.length;
+        if(top) while(--top) {
+            current = Math.floor(Math.random() * (top + 1));
+            tmp = array[current];
+            array[current] = array[top];
+            array[top] = tmp;
+        }
+        return array;
+    }
+    a = shuffle(array);
+    return a[0];
+}
+
+/**
+ * Send clip from clips array
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {array} clips
+ */
+function sendClip(channel, clips) {
+    channel.send(pickRandom(clips))
+}
+
+/**
+ * Add twitch clip to clips array
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel
+ * @param {array} clips
+ * @param {string} option
+ * @param {string} value
+ */
+function addClip(channel, clips, option, value) {
+    clips.push(value);
+    channel.send('Your clip has been added.');
+}
+
+function listClips(channel, clips, option) {
+    channel.send({embed: {
+        title: 'List of Twitch Clips',
+        color: 15105570,
+        description: clips.join(' ')
+        }});
+}
+
+/**
  * Show the available commands
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option
  */
 function availableCommands(channel, option) {
     if (!option) {
-        channel.send(`\`\`\`Available commands:
-        ss~status  : Find out the status of the tournament
-        ss~status update <Yes or No> : Update the status of the tournament
-        ss~status date <MM/DD/YYYY> : Update the date of the tournment
-        ss~status time <00:00> : Update the time of the tournament
-        ss~reset : resets tournament status, date and time
+        channel.send({embed: {
+            color: 15105570,
+                title: 'Available Commands',
+                fields: [{
+                    name: 'Status',
+                    value: `
+
+                    **ss~status**  | Find out the status of the tournament
+
+                    **ss~status update** <*Yes* or *No*> | Update the status of the tournament
+
+                    **ss~status date** <*MM/DD/YYYY*> | Update the date of the tournament
+
+                    **ss~status time** <*00:00*> <*AM*/*PM*> | Update the time of the tournament
+
+                    **ss~status reset** | Reset tournament status, date and time
+
+                    `
+                },
+                {
+                    name: 'Participation',
+                    value: `
         
-        ss~show : List of Participants 
+                    **ss~show** | List of Participants 
 
-        ss~join <Gamer Tag> : Joining Tournament 
-        ss~leave : Leave the tournment
+                    **ss~join** <*Gamer Tag*> | Joining Tournament 
 
-        ss~help : Provides information on how to join\`\`\``);
+                    **ss~leave** | Leave the tournament
+
+                     **ss~help** | Provides information on how to join`
+                },
+                {
+                    name: 'Clips',
+                    value: `
+
+                    **ss~clip** | Show random Twitch clip
+
+                    **ss~clip add** | Add a Twitch clip
+
+                    **ss~clip list** | Lists all Twitch clips`
+                }]
+
+    }});
     }
     else {
         channel.send('Those options are not available at the moment.');
@@ -281,10 +403,9 @@ function availableCommands(channel, option) {
  * @param {string} option 
  * @param {string} value 
  */
-function statusUtil(channel, option, value) {
+function statusUtil(channel, option, value, otherValue) {
     if (!option) {
-        provideStatus(channel, option, value);
-        provideDateAndTime(channel, option, value);
+        provideInfo(channel, option, value, otherValue);
     }
     else if (option === 'update') {
         updateStatus(channel, value);
@@ -293,8 +414,11 @@ function statusUtil(channel, option, value) {
         updateDate(channel, value);
     } 
     else if (option === 'time') {
-        updateTime(channel, value);
+        updateTime(channel, value, otherValue);
     } 
+    else if (option === 'reset') {
+        resetStatus(channel, option, value, otherValue);
+    }
     else {
         channel.send('Those options are not available at the moment.');
     }  
@@ -325,5 +449,20 @@ function kickUser(guild, channel, tag, author, msg) {
     }
     else {
         channel.send('You are not the owner of this server.')
+    }
+}
+
+function clipsUtil(channel, clips, option, value) {
+    if(!option) {
+        sendClip(channel, clips);
+    }
+    else if(option === 'add') {
+        addClip(channel, clips, option, value);
+    }
+    else if(option === 'list') {
+        listClips(channel, clips, option);
+    }
+     else {
+        channel.send('Those options are not available at the moment.');
     }
 }
