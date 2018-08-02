@@ -36,7 +36,7 @@ bot.on('message', async msg => {
     let otherValue = msgArgs[3];
     let author = msg.author;
     let username = author.username;
-    let tag = author.tag.trim();
+    let tag = author.tag.trim().toLowerCase();
     
     if (author.bot) return;       
     
@@ -46,7 +46,7 @@ bot.on('message', async msg => {
             break;
 
         case `${prefix}status`:
-            statusUtil(channel, option, value, otherValue);
+            statusUtil(guild, channel, option, value, otherValue, author);
             break;
         
         case `${prefix}show`:
@@ -54,7 +54,7 @@ bot.on('message', async msg => {
             break;
         
         case `${prefix}join`:
-            joinShowdown(guild, channel, option, username, tag, author, msg);
+            joinShowdown(guild, channel, option, value, username, tag, author, msg);
             break;
 
         case `${prefix}leave`:
@@ -89,11 +89,12 @@ function provideHelp(channel, option) {
             color: 15105570,
             description: `To join SundayShowdown, please follow the below instructions:
 
-        1. Start the response with "ss~join" and then a space
-        2. Put your Epic gamer tag after the space
-        3. Press enter
+        1. Start the command with "ss~join" and then a SPACE
+        2. Type your Epic gamer tag and then a SPACE
+        3. Type your partners Epic gamer tag
+        3. Press ENTER
         4. <:AfroHype:473326016782270474>
-        Ex. ss~join MyEpicGamerTag
+        Ex. ss~join MyEpicGamerTag MyPartnerTag
 
         ${assistMessage}`
         }});
@@ -192,13 +193,13 @@ function provideInfo(channel, option, value, otherValue) {
     provideStatus(channel, option, value);
     provideDateAndTime(channel, option, value, otherValue);
     channel.send({embed: {
-            title: 'SundayShowdown Information',
-            color: 15105570,
-            description: `${displayStatus}
+        title: 'SundayShowdown Information',
+        color: 15105570,
+        description: `${displayStatus}
 
-            ${displayDate}
+        ${displayDate}
 
-            ${assistMessage}`
+        ${assistMessage}`
         }});
 }        
 
@@ -221,17 +222,18 @@ function resetStatus(channel, option, value, otherValue) {
  * @param {Guild} guild
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} gamerTag 
+ * @param {string} gamerTagPartner
  * @param {string} username 
  * @param {string} tag
  * @param {string} author
  * @param {Message} msg
  */
-function joinShowdown(guild, channel, gamerTag, username, tag, author, msg) {
+function joinShowdown(guild, channel, gamerTag, gamerTagPartner, username, tag, author, msg) {
     // channel.send(`The username is: ${username} and the tag is: ${tag}.`);
     // channel.send(`The gamer tag you entered: ${gamerTag}.`); 
     if (gamerTag) {       
-        if (!participants.has(`${tag}`)) {
-            participants.set(`${tag}`, `${gamerTag}`);
+        if (!participants.has(tag)) {
+            participants.set(tag, [gamerTag, gamerTagPartner]);
             guild.owner.send(`${author} has joined.`)
                 .then(message => console.log(`Sent message: ${message.content}`))
                 .catch(console.error);
@@ -281,12 +283,18 @@ function leaveShowdown(guild, channel, option, tag, author, msg) {
  * @param {string} option
  */
 function showParticipants(channel, option) {
+    let allParticipants= ``;
+
     if (!option) {
-        channel.send('List of Participants:');
-        //PROBLEM - not sure how to print participants into embed
         participants.forEach( (value,key) => {
-            channel.send(key + ':' + value + '\n');
+            allParticipants += `${key} : ${value} \n`; 
         });
+
+        channel.send({embed: {
+            color: 3447003,
+            title: 'List of Participants:',
+            description: allParticipants
+        }});
     }
     else {
         channel.send('Those options are not available at the moment.');
@@ -358,47 +366,48 @@ function availableCommands(channel, option) {
     if (!option) {
         channel.send({embed: {
             color: 15105570,
-                title: 'Available Commands',
-                fields: [{
-                    name: 'Status',
-                    value: `
+            title: 'Available Commands',
+            fields: [{
+                name: 'Status',
+                value: `
 
-                    **ss~status**  | Find out the status of the tournament
+                **ss~status**  | Find out the status of the tournament
 
-                    **ss~status update** <*Yes* or *No*> | Update the status of the tournament
+                **ss~status update** <*Yes* or *No*> | Update the status of the tournament [ONLY OWNER]
 
-                    **ss~status date** <*MM/DD/YYYY*> | Update the date of the tournament
+                **ss~status date** <*MM/DD/YYYY*> | Update the date of the tournament [ONLY OWNER]
 
-                    **ss~status time** <*00:00*> <*AM*/*PM*> | Update the time of the tournament
+                **ss~status time** <*00:00*> <*AM*/*PM*> | Update the time of the tournament [ONLY OWNER]
 
-                    **ss~status reset** | Reset tournament status, date and time
+                **ss~status reset** | Reset tournament status, date and time [ONLY OWNER]
 
-                    `
-                },
-                {
-                    name: 'Participation',
-                    value: `
-        
-                    **ss~show** | List of Participants 
+                `
+            },
+            {
+                name: 'Participation',
+                value: `
+    
+                **ss~show** | List of Participants 
 
-                    **ss~join** <*Gamer Tag*> | Joining Tournament 
+                **ss~join** <*YourGamerTag* *PartnerGamerTag*> | Joining Tournament 
 
-                    **ss~leave** | Leave the tournament
+                **ss~leave** | Leave the tournament
 
-                     **ss~help** | Provides information on how to join`
-                },
-                {
-                    name: 'Clips',
-                    value: `
+                **ss~help** | Provides information on how to join
 
-                    **ss~clip** | Show random Twitch clip
+                **ss~kick** <*DiscordTag*>| Kick a usertag from the tournment list [ONLY OWNER]`
+            },
+            {
+                name: 'Clips',
+                value: `
 
-                    **ss~clip add** | Add a Twitch clip
+                **ss~clip** | Show random Twitch clip
 
-                    **ss~clip list** | Lists all Twitch clips`
-                }]
+                **ss~clip add** | Add a Twitch clip
 
-    }});
+                **ss~clip list** | Lists all Twitch clips`
+            }]
+        }});
     }
     else {
         channel.send('Those options are not available at the moment.');
@@ -407,29 +416,57 @@ function availableCommands(channel, option) {
 
 /**
  * Utility function that handle status of the tournament
+ * @param {Guild} guild
  * @param {TextChannel | DMChannel | GroupDMChannel} channel 
  * @param {string} option 
  * @param {string} value 
+ * @param {User} author
  */
-function statusUtil(channel, option, value, otherValue) {
+function statusUtil(guild, channel, option, value, otherValue, author) {
     if (!option) {
         provideInfo(channel, option, value, otherValue);
     }
-    else if (option === 'update') {
-        updateStatus(channel, value);
-    }
-    else if (option === 'date') {
-        updateDate(channel, value);
-    } 
-    else if (option === 'time') {
-        updateTime(channel, value, otherValue);
-    } 
-    else if (option === 'reset') {
-        resetStatus(channel, option, value, otherValue);
+    else if (option){
+        updateAndResetOptions(guild, channel, option, value, otherValue, author);
     }
     else {
         channel.send('Those options are not available at the moment.');
     }  
+}
+
+/**
+ * Helper function to call the update status/date/time/reset functions
+ * @param {Guild} guild
+ * @param {TextChannel | DMChannel | GroupDMChannel} channel 
+ * @param {string} option 
+ * @param {string} value 
+ * @param {string} otherValue 
+ * @param {User} author
+ */
+function updateAndResetOptions(guild, channel, option, value, otherValue, author) {
+    let guildOwner = guild.owner.id;
+    let msgOwner = author.id;
+
+    if (msgOwner == guildOwner) {
+        if (option === 'update') {
+            updateStatus(channel, value);    
+        }
+        else if (option === 'date') {
+            updateDate(channel, value);
+        } 
+        else if (option === 'time') {
+            updateTime(channel, value, otherValue);
+        } 
+        else if (option === 'reset') {
+            resetStatus(channel, option, value, otherValue);
+        }
+        else {
+            channel.send('Those options are not available at the moment.');
+        }
+    }
+    else {
+        channel.send('Hmm, it does not look like you have permissions to change the status. Are you sure you\'re the owner of the server <:UmbreonReally:471903092758020106>');
+    }
 }
 
 /**
@@ -446,10 +483,12 @@ function kickUser(guild, channel, tag, author, msg) {
 
     if (msgOwner == guildOwner) {
         if (participants.has(tag)) {
-        participants.delete(tag);
-        guild.owner.send(`${tag} has been removed from the tournament.`)
-            .then(message => console.log(`Sent message: ${message.content}`))
-            .catch(console.error);
+            let partners = participants.get(tag);
+            participants.delete(tag);
+            guild.owner.send(`${tag} has been removed from the tournament along with his partner, ${partners}`)
+                .then(message => console.log(`Sent message: ${message.content}`))
+                .catch(console.error);
+            channel.send(`${tag} has been removed from the tournament along with his partner, ${partners}`);
         }
         else { 
             channel.send('User does not exist in the tournament.');
